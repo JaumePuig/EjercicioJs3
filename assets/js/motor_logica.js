@@ -1,49 +1,54 @@
-import { obtenerVuelos, obtenerVuelosPorDestino, actualizarPlazas } from "./vuelos_db.js";
+// motor_logica.js
 
-/* 🔍 BUSCAR */
+// Función para buscar vuelos y mostrarlos
 function ejecutarBusqueda() {
   let destino = document.getElementById("inputDestino").value;
-  let vuelos = obtenerVuelosPorDestino(destino);
+  let resultados = obtenerVuelosPorDestino(destino);
   let div = document.getElementById("resultadosBusqueda");
 
   div.innerHTML = "";
 
-  for (let v of vuelos) {
-    div.innerHTML += 
-      v.destino + " - $" + v.precio +
-      " <button onclick='reservar(" + v.id + ")'>Reservar</button><br>";
+  if(resultados.length === 0) {
+    div.innerHTML = "No hay vuelos";
+    return;
+  }
+
+  for(let v of resultados) {
+    let plazasLibres = v.asientosTotales - v.asientosOcupados;
+    div.innerHTML += `
+      ${v.destino} | $${v.precio} | Plazas libres: ${plazasLibres} 
+      <button onclick="reservar(${v.id})">Reservar</button><br>
+    `;
   }
 }
 
-/* 🎟️ RESERVAR */
+// Función para reservar un vuelo
 function reservar(id) {
-  let vuelos = obtenerVuelos();
-  let v = vuelos.find(x => x.id == id);
-
-  if (v.plazas > 0) {
-    actualizarPlazas(id, v.plazas - 1);
-    alert("OK");
+  let vuelo = vuelos.find(v => v.id == id);
+  if(vuelo.asientosOcupados < vuelo.asientosTotales) {
+    vuelo.asientosOcupados += 1;
+    alert("Reserva realizada");
+    ejecutarBusqueda(); // refrescar lista
   } else {
-    alert("NO hay plazas");
+    alert("No hay plazas disponibles");
   }
 }
 
-/* 📊 ESTADÍSTICAS */
+// Función para mostrar estadísticas
 function mostrarEstadisticas() {
-  let vuelos = obtenerVuelos();
-
-  let total = vuelos.reduce((a, v) => a + v.precio * (v.ocupados || 0), 0);
-
+  let total = 0;
   let caro = vuelos[0];
-  for (let v of vuelos) {
-    if (v.precio > caro.precio) caro = v;
+
+  for(let v of vuelos) {
+    total += v.precio * v.asientosOcupados;
+    if(v.precio > caro.precio) caro = v;
   }
 
   document.getElementById("reporteGral").innerHTML =
-    "Total: $" + total + "<br>Más caro: " + caro.destino;
+    `Total recaudación: $${total} <br>Destino más caro: ${caro.destino} ($${caro.precio})`;
 }
 
-/* 🔗 CONECTAR BOTONES */
+// Hacer funciones visibles para los botones
 window.ejecutarBusqueda = ejecutarBusqueda;
 window.mostrarEstadisticas = mostrarEstadisticas;
 window.reservar = reservar;
